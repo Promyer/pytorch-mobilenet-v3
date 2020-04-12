@@ -1,4 +1,5 @@
-# A PyTorch implementation of MobileNetV3
+# A PyTorch implementation of MobileNetV3 for video
+# Forked by https://github.com/kuan-wang/pytorch-mobilenet-v3
 
 This is a PyTorch implementation of MobileNetV3 architecture as described in the paper [Searching for MobileNetV3](https://arxiv.org/pdf/1905.02244.pdf).
 
