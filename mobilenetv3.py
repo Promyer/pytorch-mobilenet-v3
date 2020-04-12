@@ -6,7 +6,7 @@ import torch.nn.functional as F
 __all__ = ['MobileNetV3', 'mobilenetv3']
 
 
-def conv_bn(inp, oup, stride, conv_layer=nn.Conv2d, norm_layer=nn.BatchNorm2d, nlin_layer=nn.ReLU):
+def conv_bn(inp, oup, stride, conv_layer=nn.Conv3d, norm_layer=nn.BatchNorm3d, nlin_layer=nn.ReLU):
     return nn.Sequential(
         conv_layer(inp, oup, 3, stride, 1, bias=False),
         norm_layer(oup),
@@ -14,7 +14,7 @@ def conv_bn(inp, oup, stride, conv_layer=nn.Conv2d, norm_layer=nn.BatchNorm2d, n
     )
 
 
-def conv_1x1_bn(inp, oup, conv_layer=nn.Conv2d, norm_layer=nn.BatchNorm2d, nlin_layer=nn.ReLU):
+def conv_1x1_bn(inp, oup, conv_layer=nn.Conv3d, norm_layer=nn.BatchNorm3d, nlin_layer=nn.ReLU):
     return nn.Sequential(
         conv_layer(inp, oup, 1, 1, 0, bias=False),
         norm_layer(oup),
@@ -43,7 +43,7 @@ class Hsigmoid(nn.Module):
 class SEModule(nn.Module):
     def __init__(self, channel, reduction=4):
         super(SEModule, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.avg_pool = nn.AdaptiveAvgPool3d(1)
         self.fc = nn.Sequential(
             nn.Linear(channel, channel // reduction, bias=False),
             nn.ReLU(inplace=True),
@@ -80,8 +80,8 @@ class MobileBottleneck(nn.Module):
         padding = (kernel - 1) // 2
         self.use_res_connect = stride == 1 and inp == oup
 
-        conv_layer = nn.Conv2d
-        norm_layer = nn.BatchNorm2d
+        conv_layer = nn.Conv3d
+        norm_layer = nn.BatchNorm3d
         if nl == 'RE':
             nlin_layer = nn.ReLU # or ReLU6
         elif nl == 'HS':
@@ -116,7 +116,7 @@ class MobileBottleneck(nn.Module):
 
 
 class MobileNetV3(nn.Module):
-    def __init__(self, n_class=1000, input_size=224, dropout=0.8, mode='small', width_mult=1.0):
+    def __init__(self, n_class=10, input_size=224, dropout=0.8, mode='small', width_mult=1.0):
         super(MobileNetV3, self).__init__()
         input_channel = 16
         last_channel = 1280
@@ -176,15 +176,15 @@ class MobileNetV3(nn.Module):
         if mode == 'large':
             last_conv = make_divisible(960 * width_mult)
             self.features.append(conv_1x1_bn(input_channel, last_conv, nlin_layer=Hswish))
-            self.features.append(nn.AdaptiveAvgPool2d(1))
-            self.features.append(nn.Conv2d(last_conv, last_channel, 1, 1, 0))
+            self.features.append(nn.AdaptiveAvgPool3d(1))
+            self.features.append(nn.Conv3d(last_conv, last_channel, 1, 1, 0))
             self.features.append(Hswish(inplace=True))
         elif mode == 'small':
             last_conv = make_divisible(576 * width_mult)
             self.features.append(conv_1x1_bn(input_channel, last_conv, nlin_layer=Hswish))
             # self.features.append(SEModule(last_conv))  # refer to paper Table2, but I think this is a mistake
-            self.features.append(nn.AdaptiveAvgPool2d(1))
-            self.features.append(nn.Conv2d(last_conv, last_channel, 1, 1, 0))
+            self.features.append(nn.AdaptiveAvgPool3d(1))
+            self.features.append(nn.Conv3d(last_conv, last_channel, 1, 1, 0))
             self.features.append(Hswish(inplace=True))
         else:
             raise NotImplementedError
@@ -209,11 +209,11 @@ class MobileNetV3(nn.Module):
     def _initialize_weights(self):
         # weight initialization
         for m in self.modules():
-            if isinstance(m, nn.Conv2d):
+            if isinstance(m, nn.Conv3d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out')
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
-            elif isinstance(m, nn.BatchNorm2d):
+            elif isinstance(m, nn.BatchNorm3d):
                 nn.init.ones_(m.weight)
                 nn.init.zeros_(m.bias)
             elif isinstance(m, nn.Linear):
